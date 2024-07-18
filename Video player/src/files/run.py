@@ -26,10 +26,10 @@ class App(WindowGUI):
     def __init__(self, fingers_up: list[int], fingers_touch: list[int],
                  buffer: list[str], message: list[str], landmark: list[list[int]]):
         super().__init__(fingers_up, fingers_touch, buffer, message, landmark)
-        self.windows_height = 300
-        self.window_width = 230
+        self.windows_height = 340
+        self.window_width = 250
         self.name = 'Video player'
-        self.video_formats = ['mp4']
+        self.video_formats = ['mp4', 'avi', 'mov', 'mpg', 'wmv']
         video_files = []
         for file in os.listdir('video'):
             if file.rsplit('.', 1)[1] in self.video_formats:
@@ -48,26 +48,36 @@ class App(WindowGUI):
             fps = self.video.get(cv2.CAP_PROP_FPS)
             self.new_time += 1 / fps
             ret, frame = self.video.read()
+            while time.time() >= self.new_time:
+                self.new_time += 1 / fps
+                ret, frame = self.video.read()
             if not ret:
                 self.stop()
             else:
                 h, w, c = frame.shape
-                self.frame = cv2.resize(frame, dsize=(w * (self.windows_height + self.height_moving_area) // h,
-                                                      self.windows_height + self.height_moving_area))
+                new_h = self.windows_height - 35
+                new_w = w * new_h // h
+                self.window_width = new_w
+                self.frame = cv2.resize(frame, dsize=(new_w, new_h))
 
         if self.hide:
             return
 
-        for i, file in enumerate(self.video_files):
-            self.button(img, 0, i * 40, 230, 35, file, (200, 255, 200), lambda f=file: self.set_select(f))
-
-        self.text(img, 10, self.windows_height - 60, self.select, (0, 0, 0))
+        if self.is_play:
+            pass
+        else:
+            for i, file in enumerate(self.video_files):
+                self.button(img, 5, i * 35 + 5, self.window_width - 10, 30, file, (200, 255, 200),
+                            lambda f=file: self.set_select(f))
+            self.text(img, 10, self.windows_height - 60, self.select, (0, 0, 0))
 
         if self.is_play:
-            self.button(img, 0, self.windows_height - 35, 230, 35, 'Stop', (0, 0, 255), lambda: self.stop())
-            self.add_img(img, 240, 0, self.frame)
+            self.button(img, 5, self.windows_height - 35, self.window_width - 10, 35, 'Stop', (0, 0, 255),
+                        lambda: self.stop())
+            self.add_img(img, 0, 0, self.frame)
         else:
-            self.button(img, 0, self.windows_height - 35, 230, 35, 'Play', (0, 255, 0), lambda: self.play())
+            self.button(img, 5, self.windows_height - 35, self.window_width - 10, 35, 'Play', (0, 255, 0),
+                        lambda: self.play())
 
     def set_select(self, file):
         self.select = file
@@ -83,3 +93,4 @@ class App(WindowGUI):
     def stop(self):
         self.is_play = False
         self.player.close_player()
+        self.window_width = 250

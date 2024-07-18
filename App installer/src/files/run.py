@@ -56,12 +56,14 @@ def get_pkg_list():
     return pkg_list
 
 
-def convert_to_kb_mb_gb(num, _round):
+def convert_to_kb_mb_gb(num, _round=2):
     ed = ['B', 'KB', 'MB', 'GB']
     cnt = 0
     while num >= 1000 and cnt < len(ed):
         num = round(num / 1000, _round)
         cnt += 1
+    if _round == 0:
+        num = int(num)
     return f'{num}{ed[cnt]}'
 
 
@@ -70,13 +72,14 @@ class App(WindowGUI):
                  buffer: list[str], message: list[str], landmark: list[list[int]]):
         super().__init__(fingers_up, fingers_touch, buffer, message, landmark)
         self.name = 'App installer'  # имя окна
-        self.windows_height = 300  # высота окна
+        self.windows_height = 420  # высота окна
         self.window_width = 460  # ширина окна
         self.x = 200  # координаты нижнего левого угла
         self.y = 400
         self.pkg_list = None
         self.cur_pkg = None
         self.install_status = ''
+        self.refresh_status = ''
 
     def __call__(self, img):
         super().__call__(img)  # прорисовка и обработка окна
@@ -84,9 +87,13 @@ class App(WindowGUI):
             return
         if self.pkg_list is not None:
             for i, item in enumerate(self.pkg_list):
-                self.button(img, 5, i * 45 + 5, 200, 40, item['name'], (220, 255, 0),
-                            lambda: self.select(item))
-        self.button(img, 5, self.windows_height - 45, 200, 40, 'refresh', (200, 200, 200), self.refresh)
+                self.button(img, 5, i * 30 + 5, 200, 25, item['name'], (220, 255, 0),
+                            lambda: self.select(item), text_font_scale=0.9)
+        if self.refresh_status == '':
+            self.button(img, 5, self.windows_height - 35, 200, 30, 'refresh', (200, 200, 200),
+                        self.refresh)
+        else:
+            self.text(img, 10, self.windows_height - 20, self.refresh_status, (50, 50, 50))
 
         if self.cur_pkg is not None:
             self.text(img, 240, 35, self.cur_pkg['name'], (0, 0, 0))
@@ -103,8 +110,10 @@ class App(WindowGUI):
                     line = ''
                     line_num += 1
             self.text(img, 220, 110 + line_num * 30, line, (0, 0, 0))
-            self.text(img, 215, self.windows_height - 60, f'download size: {self.cur_pkg["download_size"]}',
-                      (0, 0, 0))
+            self.text(img, 215, self.windows_height - 60,
+                      f'download size:{convert_to_kb_mb_gb(self.cur_pkg["download_size"], 1)}',
+                      (0, 0, 0),
+                      text_font_scale=0.9)
             if self.install_status == '':
                 self.button(img, 215, self.windows_height - 45, 240, 40, 'Install', (0, 255, 0), self.start_install_pkg)
             else:
@@ -114,10 +123,39 @@ class App(WindowGUI):
         self.cur_pkg = pkg
 
     def refresh(self):
-        self.pkg_list = get_pkg_list()
-        # self.pkg_list = [{'name': 'Calc Pro', 'description': 'Improved version of the calculator',
-        #                   'dir_on_github': 'Calc Pro', 'zip_file': 'Calc Pro/Calc Pro.zip', 'download_size': 123,
-        #                   'install_size': -1}]
+        self.refresh_status = 'refreshing'
+        threading.Thread(target=self.refresh_in_bg).start()
+
+    def refresh_in_bg(self):
+        # self.pkg_list = get_pkg_list()
+        # print(self.pkg_list)
+        # for i in range(500_000_000):
+        #     ...
+        self.pkg_list = [
+            {'name': 'App installer', 'description': 'Apps installer', 'dir_on_github': 'App installer',
+             'zip_file': 'App installer/App installer.zip', 'download_size': 2801, 'install_size': None},
+            {'name': 'App remover', 'description': 'Apps remover', 'dir_on_github': 'App remover',
+             'zip_file': 'App remover/App remover.zip', 'download_size': 1847, 'install_size': None},
+            {'name': 'Audio player', 'description': 'Audio player', 'dir_on_github': 'Audio player',
+             'zip_file': 'Audio player/Audio player.zip', 'download_size': 1604, 'install_size': None},
+            {'name': 'Calc Pro', 'description': 'Improved version of the calculator', 'dir_on_github': 'Calc Pro',
+             'zip_file': 'Calc Pro/Calc Pro.zip', 'download_size': 1683, 'install_size': None},
+            {'name': 'Calculator', 'description': 'Simple calculator', 'dir_on_github': 'Calculator',
+             'zip_file': 'Calculator/Calculator.zip', 'download_size': 1515, 'install_size': None},
+            {'name': 'Keyboard', 'description': 'Print text in AR', 'dir_on_github': 'Keyboard',
+             'zip_file': 'Keyboard/Keyboard.zip', 'download_size': 1431, 'install_size': None},
+            {'name': 'Paint', 'description': 'Art in AR', 'dir_on_github': 'Paint',
+             'zip_file': 'Paint/Paint.zip', 'download_size': 1548, 'install_size': None},
+            {'name': 'Timer', 'description': 'Timer', 'dir_on_github': 'Timer',
+             'zip_file': 'Timer/Timer.zip', 'download_size': 37039, 'install_size': None},
+            {'name': 'Video player', 'description': 'Video player', 'dir_on_github': 'Video player',
+             'zip_file': 'Video player/Video player.zip', 'download_size': 1831, 'install_size': None},
+            {'name': '_Clock', 'description': 'Clock widget', 'dir_on_github': '_Clock',
+             'zip_file': '_Clock/_Clock.zip', 'download_size': 1692, 'install_size': None},
+            {'name': '_Menu', 'description': '', 'dir_on_github': '_Menu',
+             'zip_file': '_Menu/_Menu.zip', 'download_size': 1572, 'install_size': None}
+        ]
+        self.refresh_status = ''
 
     def start_install_pkg(self):
         self.install_status = 'preparing to downloading'
